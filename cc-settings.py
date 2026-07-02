@@ -10,6 +10,7 @@
   cc-settings.py show   <providers.toml> <provider>                 # то же, но человекочитаемо, токен скрыт
   cc-settings.py write  <providers.toml> <settings.json> <provider> # прописать провайдера в settings.json
   cc-settings.py status <providers.toml> <settings.json>            # показать текущего провайдера
+  cc-settings.py effort <providers.toml> <settings.json> [level|off] # сменить reasoning у текущей модели
 """
 import json
 import os
@@ -27,6 +28,17 @@ def load_json(path, default):
     except json.JSONDecodeError:
         print(f"ВНИМАНИЕ: {path} — битый JSON.", file=sys.stderr)
         return default
+
+
+def save_settings(path, data):
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
 
 
 def providers(path):
@@ -132,14 +144,7 @@ def cmd_write(pp, sp, name):
         env.pop(k, None)
     env.update(env_new)               # для 'claude' env_new пуст -> дефолтный Anthropic
     settings["env"] = env
-    os.makedirs(os.path.dirname(sp) or ".", exist_ok=True)
-    with open(sp, "w", encoding="utf-8") as f:
-        json.dump(settings, f, indent=2, ensure_ascii=False)
-        f.write("\n")
-    try:
-        os.chmod(sp, 0o600)
-    except OSError:
-        pass
+    save_settings(sp, settings)
 
 
 def _match_provider(provs, base):
@@ -164,6 +169,45 @@ def cmd_status(pp, sp):
     print("\n".join(_render_env(env, token_state)))
 
 
+# Допустимые уровни ризонинга (Anthropic output_config.effort), по возрастанию.
+EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
+EFFORT_CLEAR = ("off", "none", "clear", "unset")
+
+
+def cmd_effort(pp, sp, value):
+    """Меняет ТОЛЬКО CLAUDE_CODE_EFFORT_LEVEL в текущем settings.json, не трогая провайдера."""
+    provs = providers(pp)
+    data = load_json(sp, {})
+    if not isinstance(data, dict):
+        data = {}
+    env = data.get("env") if isinstance(data.get("env"), dict) else {}
+
+    if value is None:                       # показать текущий
+        print(f"Текущий reasoning: {env.get('CLAUDE_CODE_EFFORT_LEVEL', '<не задан>')}")
+        return
+
+    unknown = False
+    if value in EFFORT_CLEAR:
+        env.pop("CLAUDE_CODE_EFFORT_LEVEL", None)
+        done = "снят"
+    else:                                   # принимаем любое значение; нестандартное — под варнинг
+        env["CLAUDE_CODE_EFFORT_LEVEL"] = value
+        done = f"-> {value}"
+        unknown = value not in EFFORT_LEVELS
+
+    data["env"] = env
+    save_settings(sp, data)
+
+    name = _match_provider(provs, env.get("ANTHROPIC_BASE_URL"))
+    print(f"Готово: reasoning {done} (провайдер: {name}).")
+    if unknown:
+        print(f"Внимание: '{value}' вне штатного набора ({', '.join(EFFORT_LEVELS)}). "
+              "Ставлю как есть — на ваш страх и риск.")
+    if env.get("ANTHROPIC_BASE_URL"):       # не дефолтный Anthropic
+        print("Внимание: провайдер не Anthropic — сторонний эндпоинт может effort игнорировать.")
+    print("Перезапустите сессию Claude Code, чтобы применить.")
+
+
 def main(a):
     if len(a) == 4 and a[1] == "env":
         cmd_env(a[2], a[3])
@@ -173,13 +217,18 @@ def main(a):
         cmd_write(a[2], a[3], a[4])
     elif len(a) == 4 and a[1] == "status":
         cmd_status(a[2], a[3])
+    elif len(a) == 5 and a[1] == "effort":
+        cmd_effort(a[2], a[3], a[4])
+    elif len(a) == 4 and a[1] == "effort":
+        cmd_effort(a[2], a[3], None)
     else:
         sys.exit(
             "usage:\n"
             "  cc-settings.py env    <providers.toml> <provider>\n"
             "  cc-settings.py show   <providers.toml> <provider>\n"
             "  cc-settings.py write  <providers.toml> <settings.json> <provider>\n"
-            "  cc-settings.py status <providers.toml> <settings.json>"
+            "  cc-settings.py status <providers.toml> <settings.json>\n"
+            "  cc-settings.py effort <providers.toml> <settings.json> [level|off]"
         )
 
 

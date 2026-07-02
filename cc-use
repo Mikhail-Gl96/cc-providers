@@ -7,6 +7,7 @@
 # Провайдеры берутся из providers.toml, запись JSON — в cc-settings.py.
 #
 # Использование:  cc-use <claude|glm|ds|status>
+#                 cc-use effort <low|medium|high|xhigh|max|off>   # сменить reasoning у текущей модели
 # После смены ОБЯЗАТЕЛЬНО перезапустите сессию Claude Code — env читается при старте.
 set -euo pipefail
 
@@ -23,9 +24,13 @@ done
 
 provider="${1:-status}"
 
-if [ "$provider" = "status" ]; then
-  exec python3 "$CC_SETTINGS_PY" status "$CC_PROVIDERS_FILE" "$SETTINGS"
-fi
+case "$provider" in
+  status)
+    exec python3 "$CC_SETTINGS_PY" status "$CC_PROVIDERS_FILE" "$SETTINGS" ;;
+  effort|reasoning)                       # менять только reasoning, провайдера не трогаем
+    shift || true
+    exec python3 "$CC_SETTINGS_PY" effort "$CC_PROVIDERS_FILE" "$SETTINGS" "$@" ;;
+esac
 
 python3 "$CC_SETTINGS_PY" write "$CC_PROVIDERS_FILE" "$SETTINGS" "$provider"
 echo "Готово: глобальный провайдер -> $provider."

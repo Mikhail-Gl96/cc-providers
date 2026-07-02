@@ -164,6 +164,27 @@ cc-use claude    # вернуть дефолтный Anthropic
 
 ---
 
+## Уровень reasoning (effort) для текущей модели
+
+Меняет `CLAUDE_CODE_EFFORT_LEVEL` в глобальном `settings.json`, **не переключая
+провайдера**:
+
+```bash
+cc-use effort xhigh   # low | medium | high | xhigh | max
+cc-use effort off     # снять (вернуть дефолт)
+cc-use effort         # показать текущий
+```
+
+Уровни по возрастанию: `low < medium < high < xhigh < max`. `max` работает на
+Anthropic Opus 4.6+/Sonnet 4.6/Fable 5; `xhigh` — с Opus 4.7. Нестандартное
+значение тоже примется, но `cc-use` предупредит, что оно вне штатного набора
+(на ваш страх и риск).
+
+> `effort` — это фича Anthropic API. Для сторонних провайдеров (GLM, DeepSeek,
+> LM Studio) эндпоинт может его игнорировать — `cc-use` об этом предупредит.
+
+---
+
 ## Заметки
 
 - Секреты живут только в `keys.env`; в `providers.toml` — лишь имя переменной
