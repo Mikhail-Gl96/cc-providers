@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# cc-use — переключить ГЛОБАЛЬНЫЙ провайдер по умолчанию в ~/.claude/settings.json.
+#
+# Влияет на всё, что читает settings.json: голый `claude`, расширение VS Code и т.д.
+# Нужен там, где обёртки cc-* недоступны (например, плагин VS Code).
+#
+# Провайдеры берутся из providers.toml, запись JSON — в cc-settings.py.
+#
+# Использование:  cc-use <claude|glm|ds|status>
+# После смены ОБЯЗАТЕЛЬНО перезапустите сессию Claude Code — env читается при старте.
+set -euo pipefail
+
+CC_PROVIDERS_DIR="${CC_PROVIDERS_DIR:-$HOME/.config/cc-providers}"
+CC_PROVIDERS_FILE="${CC_PROVIDERS_FILE:-$CC_PROVIDERS_DIR/providers.toml}"
+CC_SETTINGS_PY="${CC_SETTINGS_PY:-$CC_PROVIDERS_DIR/cc-settings.py}"
+SETTINGS="${CLAUDE_SETTINGS:-$HOME/.claude/settings.json}"
+
+for f in "$CC_PROVIDERS_DIR/cc-providers.sh" "$CC_SETTINGS_PY" "$CC_PROVIDERS_FILE"; do
+  [ -f "$f" ] || { echo "cc-use: не найден $f" >&2; exit 1; }
+done
+# shellcheck source=/dev/null
+. "$CC_PROVIDERS_DIR/cc-providers.sh"   # грузит keys.env: токен нужен в окружении для cc-settings.py
+
+provider="${1:-status}"
+
+if [ "$provider" = "status" ]; then
+  exec python3 "$CC_SETTINGS_PY" status "$CC_PROVIDERS_FILE" "$SETTINGS"
+fi
+
+python3 "$CC_SETTINGS_PY" write "$CC_PROVIDERS_FILE" "$SETTINGS" "$provider"
+echo "Готово: глобальный провайдер -> $provider."
+echo "Перезапустите сессию Claude Code, чтобы изменения вступили в силу."

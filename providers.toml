@@ -1,0 +1,42 @@
+# providers.toml — провайдеры для Claude Code (тулкит cc-providers).
+#
+# Комментарии — через #. Секреты сюда НЕ пишем: указываем лишь имя переменной
+# в auth_token_env, а само значение живёт в keys.env. Файл читается модулем
+# tomllib (стандартная библиотека python 3.11+), только на чтение.
+#
+# Как добавить провайдера: скопируйте блок ниже, поменяйте значения; если нужен
+# ключ — впишите его в keys.env и укажите имя в auth_token_env.
+
+# --- Anthropic по умолчанию: env пустой, провайдерские ключи просто чистятся ---
+[claude.env]
+
+# --- z.ai (GLM) ---
+[glm]
+auth_token_env = "Z_AI_API_KEY"
+[glm.env]
+ANTHROPIC_BASE_URL             = "https://api.z.ai/api/anthropic"
+ANTHROPIC_DEFAULT_OPUS_MODEL   = "glm-5.2"
+ANTHROPIC_DEFAULT_SONNET_MODEL = "glm-5.2"
+ANTHROPIC_DEFAULT_HAIKU_MODEL  = "glm-5-turbo"
+
+# --- DeepSeek ---
+[ds]
+auth_token_env = "DEEPSEEK_API_KEY"
+[ds.env]
+ANTHROPIC_BASE_URL             = "https://api.deepseek.com/anthropic"
+ANTHROPIC_DEFAULT_OPUS_MODEL   = "deepseek-v4-pro"
+ANTHROPIC_DEFAULT_SONNET_MODEL = "deepseek-v4-pro"
+ANTHROPIC_DEFAULT_HAIKU_MODEL  = "deepseek-v4-flash"
+CLAUDE_CODE_SUBAGENT_MODEL     = "deepseek-v4-flash"
+CLAUDE_CODE_EFFORT_LEVEL       = "max"
+
+# --- LM Studio (локальный сервер, нативный Anthropic /v1/messages) ---
+# Токен-заглушка прямо здесь: локально ключ не нужен, keys.env не требуется.
+# Все три слота на одной модели специально — иначе LM Studio держал бы в памяти
+# два веса сразу (Claude Code постоянно дёргает haiku на фоне).
+[lmstudio.env]
+ANTHROPIC_BASE_URL             = "http://localhost:1234"
+ANTHROPIC_AUTH_TOKEN           = "lm-studio"
+ANTHROPIC_DEFAULT_OPUS_MODEL   = "qwen/qwen3-coder-next"
+ANTHROPIC_DEFAULT_SONNET_MODEL = "qwen/qwen3-coder-next"
+ANTHROPIC_DEFAULT_HAIKU_MODEL  = "qwen/qwen3-coder-next"

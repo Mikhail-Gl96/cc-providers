@@ -1,0 +1,12 @@
+# секреты — никогда не коммитить
+keys.env
+
+# IDE
+.idea/
+
+# python
+__pycache__/
+*.pyc
+
+# локальные настройки Claude Code с токеном
+.claude/settings.local.json
